@@ -1,0 +1,17 @@
+venv/
+bitbud_memory/
+chroma_about/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+.DS_Store
+test.py
+ABOUT.md
+todo.txt
+.cache
+bitbud.log
+brain.py
+agent/gmail_tool/client_secret_file.json
+token_files/
+
