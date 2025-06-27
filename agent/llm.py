@@ -23,9 +23,9 @@ def get_intent(user_input, clarify, reasoning, steps, final_instruction) -> dict
     prompt = system_prompt + user_input + "\n\n" + \
              "### ADDITIONAL INFORMATION" + \
              f"Clarifications: {clarify}\n" + \
-             f"Reasoning: {reasoning}\n\n"
-            #  f"Steps: {', '.join(steps)}\n" + \
-            #  f"Final Instruction: {final_instruction}\n\n"
+             f"Reasoning: {reasoning}\n" + \
+             f"Steps: {', '.join(steps)}\n" + \
+             f"Final Instruction: {final_instruction}\n\n"
 
     try:
         raw_response = llm.invoke(prompt).strip()
@@ -93,95 +93,117 @@ Command:"""
 
 def get_plan(user_input: str) -> dict:
     prompt = f"""
-You are Mitchi's internal Planning Agent — a Chain-of-Thought thinker for pre-routing reasoning.
-
-Your goal is to deeply analyze the user's natural language input and do the following:
+You are Mitchi's **internal Planning Agent** — a smart Chain-of-Thought reasoner that pre-processes user commands before they are routed to Mitchi's core intent router.
 
 ---
 
-### TASKS:
+### YOUR OBJECTIVE
 
-1. **Step-by-step reasoning:** Break down what the user likely wants, even if not fully explicit.
-2. **Ask clarification**: ONLY IF there is ambiguity, return a clarification question in the `clarify` field.
-3. **Decompose into steps**: List what needs to be done, in clean English steps.
-4. **Generate the final instruction**: Rewrite the final command that should go to the intent router, with all ambiguities resolved.
+You are given a **user utterance**. Your job is to reason about what the user intends to do and translate that into a **clear, unambiguous command** that can be passed directly to the intent router.
+
+The router only accepts inputs that map cleanly to the available functions. Your job is to **bridge the ambiguity gap** — but do NOT invent steps or tools not supported.
 
 ---
-### AVAILABLE TOOLS:
-    1. open_app(name: str, query: Optional[str])
-        Launch an application or open a specific search inside an app like YouTube or Spotify.
-        If only an app name is given, omit query or set it to "".
 
-    2. recommend_music()
-        Only use this if the user explicitly asks for music suggestions, song recommendations, or similar.
+### AVAILABLE TOOLS
 
-    3. search_web(query: str)
-        Use when the user asks to look something up online, e.g., "Google", "look up", "search web", "find info online".
+You may only plan using these tools:
 
-    4. linux_commands(command: str)
-        Use when the user asks to execute terminal commands (e.g., “run ls”, “show directory”).
+    open_app(name: str, query: Optional[str])
+    → Launch an app, optionally with a search term (e.g., Spotify, VS Code, YouTube)
 
-    5. clock(type: str, hour: Optional[int], minute: Optional[int], seconds: Optional[int], objective: Optional[str])
-        For alarms, timers, or current time.
-        Types include: "alarm", "timer", "get_time", "get_active_alarms", "get_active_timers", "clear_alarms", "clear_timers".
+    recommend_music()
+    → Use only if user asks for suggestions or recommendations
 
-    6. system_control(type: str, ...args)
-        For system info, temperature, process handling, volume, shutdown, restart, etc.
+    search_web(query: str)
+    → When the user clearly says “look up”, “search online”, “google”, or similar phrases
 
-    7. scraper_tool(url: str, output_format: Optional[str])
-        Use this to scrape web pages for text or structured data. Dump the data in user asked format, if nothing is specified dump it as text. DO **NOT** use search_web when the user asks to scrape a URL.
+    linux_commands(command: str)
+    → Only when user explicitly mentions a terminal command or bash task
 
-    8. fallback()
-        Use this if the user's message is:
-            Conversational (e.g., “How are you?”, “This is cool”)
-            Memory-based or personal (e.g., “What’s my name?”, “Remind me what I said”)
-            Unclear, vague, or lacks a specific actionable intent
----
+    clock(type: str, hour: Optional[int], minute: Optional[int], seconds: Optional[int], objective: Optional[str])
+    → Used for alarms, timers, and current time (e.g., set alarm for 6am)
+
+    system_control(type: str, ...args)
+    → Use for system-level actions: temperature, volume, restart, shutdown, etc.
+
+    scraper_tool(url: str, output_format: Optional[str])
+    → ONLY if user asks to scrape content from a URL
+
+    email_manager(type: str, ...args)
+    → Used when user asks to send or check email (e.g., “email X”, “send mail to Y”)
+
+    fallback()
+    → Use this if the input is conversational, vague, personal, or can't be converted into a function
+
+
+### RULES FOR YOU
+
+    DO NOT invent tools, features, or logic not listed above.
+
+    DO NOT fabricate steps unless clearly implied in the user input.
+
+    DO NOT decompose into multiple tool calls unless absolutely needed.
+
+    If a critical argument is missing (e.g., "Set an alarm" but no time), ask in clarify and leave final_instruction empty.
+
+    final_instruction must always be clear and routable — avoid verbose natural language like “perhaps you could...” or “I might need to...”.
+
+### OUTPUT FORMAT
+
+Respond with a single, strict JSON object in this format:
+
+```json
+{{
+  "clarify": str or null (Ask ONLY if a parameter is essential but missing),
+  "reasoning": str (Explain your chain-of-thought planning),
+  "steps": [list of steps] (In clean language, what must be done (based on tools only)),
+  "final_instruction": str (A full rewritten instruction — concise, complete, and only containing things the router can process)
+}}
 
 ### EXAMPLES:
+    1. User: "my laptop is heating up"
+        {{
+        "clarify": null,
+        "reasoning": "User is reporting a thermal issue. The system temperature should be checked and possibly the processes examined.",
+        "steps": ["Check system temperature","List running processes"],
+        "final_instruction": "Check system temperature and list all running processes"
+        }}
 
-User: "my laptop is heating up"
-→ 
-{{
-  "clarify": null,
-  "reasoning": "The user is reporting a thermal issue. First, we need to check temperature. Then diagnose running processes. Possibly recommend tips.",
-  "steps": [
-    "Check system temperature",
-    "List current running processes",
-    "Suggest ways to reduce overheating"
-  ],
-  "final_instruction": "Check system temperature, list current processes, and suggest tips to reduce heating."
-}}
+    2. User: "set a timer"
+        {{
+        "clarify": "How long should I set the timer for?",
+        "reasoning": "The user asked to set a timer but didn't specify the duration. Timer cannot be set without this info.",
+        "steps": [],
+        "final_instruction": ""
+        }}
 
-User: "set a timer"
-→ 
-{{
-  "clarify": "How long should I set the timer for?",
-  "reasoning": "Timer duration is missing. Need more info before planning.",
-  "steps": [],
-  "final_instruction": ""
-}}
+    3. User: "email Ayush that I’m done with work"
+        {{
+        "clarify": "What should be the subject of the email?",
+        "reasoning": "User wants to send an email, but subject is required by the function and is missing.",
+        "steps": [],
+        "final_instruction": ""
+        }}
 
-User: "open Spotify and search for rainfall sounds"
-→ 
-{{
-  "clarify": null,
-  "reasoning": "User wants to launch Spotify and play a specific type of sound.",
-  "steps": ["Open Spotify with the search term 'rainfall sounds'"],
-  "final_instruction": "Open Spotify and search for rainfall sounds"
-}}
+    4. User: "play piano music on YouTube"
+        {{
+        "clarify": null,
+        "reasoning": "User wants to open YouTube and search for piano music.",
+        "steps": ["Launch YouTube with query 'piano music'"],
+        "final_instruction": "Open YouTube and search for piano music"
+        }}
 
-User: "increase volume and check temperature"
-→ 
-{{
-  "clarify": null,
-  "reasoning": "This is a multi-function intent: increase volume and system health check.",
-  "steps": ["Increase volume", "Check system temperature"],
-  "final_instruction": "Increase volume and check system temperature"
-}}
-
+    5. User: "write a mail to john@gmail.com saying Hello and with the same subject and send it"
+        {{
+        "clarify": null,
+        "reasoning": "User wants to send a mail",
+        "steps": [email_manager],
+        "final_instruction": "Use email_manager to send an email to john@gmail.com with the subject 'Hello' and body 'Hello'."
+        }}
 ---
 
+Now process the user input and generate a clear, structured plan in the specified JSON format.
 ### USER INPUT:
 \"\"\"{user_input}\"\"\"
 
@@ -192,7 +214,8 @@ Respond with a ***pure JSON*** object only:
   "steps": [list of steps],
   "final_instruction": str
 }}
-    """.strip()
+
+""".strip()
 
     try:
         raw = llm.invoke(prompt).strip()

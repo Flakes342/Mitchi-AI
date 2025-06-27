@@ -132,8 +132,8 @@ def get_weather_for_location(location: str) -> Optional[Dict]:
 def get_weather_forecast(location: str, days: int = 1) -> Optional[List[Dict]]:
     api_key, base_url, session = create_weather_service()
 
-    if not location_key:
-        logger.warning("No location key provided for weather forecast, returning current location forecast")
+    if not location:
+        logger.warning("No location provided for weather data, returning current location weather")
         location = get_current_location()
         if not location:
             return "[ERROR] Could not determine current location"
@@ -238,18 +238,18 @@ def weather_manager(args: dict):
         return get_weather_forecast(location, days)
     
 
-if __name__ == "__main__":
-    print ("AccuWeather Service Module")
+# if __name__ == "__main__":
+#     print ("AccuWeather Service Module")
 
-    args1 = { "type": "get_current_location"}
-    args2 = { "type": "search_location", "query": "Vietnam" }
-    args3 = { "type": "get_weather_for_location", "location": "" }
-    args4 = { "type": "get_weather_forecast", "location": "Viernam", "days": 1 } # -- Bug here!!!
+#     args1 = { "type": "get_current_location"}
+#     args2 = { "type": "search_location", "query": "Vietnam" }
+#     args3 = { "type": "get_weather_for_location", "location": "" }
+#     args4 = { "type": "get_weather_forecast", "location": "Kashmir", "days": 1 } 
 
-    print(weather_manager(args1))
-    print ("----------------------------------------")
-    print(weather_manager(args2))
-    print ("----------------------------------------")
-    print(weather_manager(args3))
-    print ("----------------------------------------")
-    print(weather_manager(args4))
+    # print(weather_manager(args1))
+    # print ("----------------------------------------")
+    # print(weather_manager(args2))
+    # print ("----------------------------------------")
+    # print(weather_manager(args3))
+    # print ("----------------------------------------")
+    # print(weather_manager(args4))

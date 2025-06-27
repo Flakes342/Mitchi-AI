@@ -17,11 +17,11 @@ def create_service(client_secret_file, API_SERVICE_NAME, API_VERSION, *SCOPES, p
     token_dir = 'token_files'
     token_file = f'token_{API_SERVICE_NAME}_{API_VERSION}{prefix}.json'
 
-    # Create token folder
+    # Creating token folder
     if not os.path.exists(os.path.join(working_dir, token_dir)):
         os.mkdir(os.path.join(working_dir, token_dir))
 
-    # Load existing credentials
+    # Loading existing credentials
     token_path = os.path.join(working_dir, token_dir, token_file)
     if os.path.exists(token_path):
         creds = Credentials.from_authorized_user_file(token_path, SCOPES)
