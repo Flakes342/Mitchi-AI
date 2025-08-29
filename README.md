@@ -7,7 +7,7 @@
 
 
 **Your Local AI Productivity Agent**  
-Mitchi AI is a **local-first, privacy-respecting AI assistant** that sits on your machine like a chill, command-reactive cat. Built as a modular, extensible desktop agent, Mitchi can connect to your favorite tools (Gmail, GitHub, Reddit, Weather, Shell, etc.) and perform intelligent actions on your command using LLMs — but it never does anything behind your back
+Mitchi AI is a **local-first, privacy-respecting AI assistant** that sits on your machine like a chill, command-reactive cat. Built as a modular, extensible desktop agent, Mitchi can connect to your favorite tools (Gmail, GitHub, Reddit, Weather, Shell, etc.) and perform intelligent actions on your command using LLMs but it never does anything behind your back
 
 
 ---
